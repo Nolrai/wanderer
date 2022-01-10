@@ -24,10 +24,10 @@ source-repository head
 
 common common-options
   build-depends:       base ^>= 4.14.3.0
-                     , Relude
+                     , relude
+                     , gloss
 
   mixins:              base hiding (Prelude)
-                     , Relude (Relude as Prelude)
 
   ghc-options:         -Wall
                        -Wcompat
