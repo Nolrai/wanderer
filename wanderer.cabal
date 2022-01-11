@@ -54,6 +54,7 @@ library
   import:              common-options
   hs-source-dirs:      src
   exposed-modules:     Wanderer
+  build-depends:       streams
 
 executable wanderer
   import:              common-options
@@ -74,6 +75,7 @@ test-suite wanderer-test
   ghc-options:         -threaded
                        -rtsopts
                        -with-rtsopts=-N
+                       -Wno-orphans
 
 benchmark wanderer-benchmark
   import:              common-options
@@ -81,6 +83,8 @@ benchmark wanderer-benchmark
   hs-source-dirs:      benchmark
   main-is:             Main.hs
   build-depends:       wanderer
+                     , criterion
   ghc-options:         -threaded
                        -rtsopts
                        -with-rtsopts=-N
+                       -Wno-orphans
