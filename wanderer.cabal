@@ -25,6 +25,7 @@ source-repository head
 common common-options
   build-depends:       base ^>= 4.14.3.0
                      , relude
+                     , linear
 
   mixins:              base hiding (Prelude)
 
@@ -51,7 +52,6 @@ common common-options
 
 library
   import:              common-options
-  build-depends:       linear
   hs-source-dirs:      src
   exposed-modules:     Wanderer
 
