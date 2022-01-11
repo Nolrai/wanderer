@@ -62,6 +62,7 @@ executable wanderer
   main-is:             Main.hs
   build-depends:       wanderer
                      , gloss
+                     , turtle
   ghc-options:         -threaded
                        -rtsopts
                        -with-rtsopts=-N
