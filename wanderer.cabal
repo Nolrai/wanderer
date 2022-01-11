@@ -25,7 +25,7 @@ source-repository head
 common common-options
   build-depends:       base ^>= 4.14.3.0
                      , relude
-                     , gloss
+                     , linear
 
   mixins:              base hiding (Prelude)
 
@@ -60,6 +60,7 @@ executable wanderer
   hs-source-dirs:      app
   main-is:             Main.hs
   build-depends:       wanderer
+                     , gloss
   ghc-options:         -threaded
                        -rtsopts
                        -with-rtsopts=-N
