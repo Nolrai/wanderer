@@ -32,10 +32,13 @@ common common-options
   ghc-options:         -Wall
                        -Wcompat
                        -Widentities
+                       -Wname-shadowing
                        -Wincomplete-uni-patterns
-                       -Wincomplete-record-updates
                        -Wredundant-constraints
                        -Wnoncanonical-monad-instances
+                       -Werror=incomplete-patterns
+                       -Werror=incomplete-record-updates
+                       -Werror=implicit-prelude
   if impl(ghc >= 8.2)
     ghc-options:       -fhide-source-paths
   if impl(ghc >= 8.4)

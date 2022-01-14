@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, ScopedTypeVariables #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, ScopedTypeVariables, DerivingStrategies #-}
 
 module Main (main) where
 
@@ -10,48 +10,56 @@ import Turtle.Options as Opt
 
 optParser :: Opt.Parser MyOptions
 optParser = mkOptions 
-  <$> argRead "law" "Which force law to use, Hook or Kepler"
+  <$> (realToFrac <$> argDouble "law" "What power of the distance to divide by: Hook is 1, Kepler is 2")
+  <*> switch "increasing" 'i' "Does the force increase from the center like Hook's Law"
   <*> optional (fromIntegral <$> optInt "forceConstant" 'k' "the scale constant for how strong the force is")
   <*> optional (uncurry V2 <$> optRead "startPosition" 'p' "") 
   <*> optional (uncurry V2 <$> optRead "startVelocity" 'q' "")
   <*> optional (fromIntegral <$> optInt "framesPerSecond" 'f' "")
   <*> optional (fromIntegral <$> optInt "stepsPerFrame" 's' "Steps of symplecticEuler to do per frame")
+  <*> optional (fromIntegral <$> optInt "secondsPerSecond" 't' "a time scale factor")
 
-mkOptions :: Law
+mkOptions :: Float
+  -> Bool
   -> Maybe Float
   -> Maybe (V2 Float)
   -> Maybe (V2 Float)
   -> Maybe Word8
   -> Maybe Word32
+  -> Maybe Float
   -> MyOptions
-mkOptions law k p' q' framesPerSecond' stepsPerFrame' = 
+mkOptions power' sign k p' q' framesPerSecond' stepsPerFrame' secondsPerSecond' = 
   let
-  forceConstant = fromMaybe (if law == Hook then 0.1 else 10 ^ (5 :: Int)) k
-  p = fromMaybe (V2 200 0) p'
-  q = fromMaybe (V2 0 8) q'
+  power = if sign then -power' else power'
+  forceConstant = fromMaybe (norm q / ( 2 * norm (accFromP power 1 p))) k
+  p = fromMaybe (V2 300 0) p'
+  q = fromMaybe (V2 0 100) q'
   framesPerSecond = fromMaybe 16 framesPerSecond'
-  stepsPerFrame = fromMaybe 1 stepsPerFrame'
+  stepsPerFrame = fromMaybe 20 stepsPerFrame'
+  secondsPerSecond = fromMaybe 1 secondsPerSecond'
   in MyOptions {..}
 
 data MyOptions = MyOptions 
-  { law :: Law
+  { power :: Float
   , forceConstant :: Float
   , p :: V2 Float
   , q :: V2 Float
   , framesPerSecond :: Word8
   , stepsPerFrame :: Word32
-  } 
+  , secondsPerSecond :: Float
+  } deriving stock (Show)
 
 main :: IO ()
 main = do
-  MyOptions {..} <- options (fromString projectName) optParser
+  s@MyOptions {..} <- options (fromString projectName) optParser
+  print s
   simulate 
     displayMode 
     black 
     (fromIntegral framesPerSecond) 
     (start p q) 
     toPicture 
-    (takeStep law forceConstant stepsPerFrame)
+    (\ viewPort deltaT -> takeStep power forceConstant stepsPerFrame viewPort (deltaT * secondsPerSecond))
 
 displayMode :: Display
 displayMode = InWindow ("Executable for " ++ projectName) (1000, 1000) (100, 100)
