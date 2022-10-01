@@ -3,6 +3,7 @@
 {-# HLINT ignore "Evaluate" #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module GeoAlgSpec where
 
@@ -32,7 +33,6 @@ swapAt n l =
   where
   (left, right) = splitAt (n + 1) l
 
-
 spec :: Spec
 spec = do
   describe "swapAt" $ do
@@ -43,12 +43,12 @@ spec = do
       \ (Sorted l :: SortedList Int) ->
         insertSort l `shouldBe` (Pos, l)
     prop "makes unsorted lists sorted" $
-      \ (l :: [Int]) -> snd (insertSort l) `shouldBe` sort l
+      \ (l :: [Int]) -> within 100000 (snd (insertSort l) `shouldBe` sort l)
     prop "tracks permutation sign" $
       \ (GnomeTest l i) -> do
         let a = insertSort l
         let b = insertSort (swapAt i l)
-        (i + 1 < length l && (l /= swapAt i l)) ==> 
+        (i + 1 < length l && (l /= swapAt i l)) ==>
           a `shouldBe` first negate b
 
   describe "MultiVector" $ do
@@ -66,9 +66,9 @@ spec = do
       prop "multiplication distributes over addition" $
         \ (x :: MultiVector Axis Int) (y :: MultiVector Axis Int) (z :: MultiVector Axis Int) ->
           x * (y + z) `shouldBe` (x * y) + (x * z)
-      prop "selfMultiplication produces a scalar" $
-        \ (x :: MultiVector Axis Int) ->
-          Set.size (getRanks x) == 1 ==> isScalar (x * x)
+      prop "self multiplying a k-vector produces a scalar" $
+        \ (HMV x :: HomogeniousMV Axis Int) ->
+          x * x `shouldSatisfy` isScalar
       -- it "multiplies" $ do
       --   printLines `mapM_` toLines (multiVectorExample "a" * multiVectorExample "b")
       --   True `shouldBe` False
@@ -97,6 +97,16 @@ instance (Ord basis, Arbitrary basis, Arbitrary t) => Arbitrary (MultiVector bas
     pure . MkMultiVector . Map.fromList $ zipWith (\ k a -> (Set.fromList k, a)) dims values
   shrink :: MultiVector basis t -> [MultiVector basis t]
   shrink (MkMultiVector m) = fmap MkMultiVector (shrink m)
+
+newtype HomogeniousMV basis a = HMV (MultiVector basis a)
+  deriving newtype (Show)
+
+instance (Ord basis, Arbitrary basis, Arbitrary t) => Arbitrary (HomogeniousMV basis t) where
+  arbitrary = HMV <$> arbitrary `suchThat` isHomogenious
+  shrink (HMV m) = HMV <$> filter isHomogenious (shrink m)
+
+isHomogenious :: MultiVector basis a -> Bool
+isHomogenious (MkMultiVector m) = Set.size (Map.keysSet m) <= 1
 
 multiVectorExample :: [Char] -> MultiVector Axis' Expr
 multiVectorExample c = MkMultiVector . Map.fromList $ do
