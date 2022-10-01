@@ -74,7 +74,7 @@ shrinkPath SimState {..} = (SimState {..}) {path = path'}
     path' = if length path > 10 ^ (5 :: Word8) then seive path else path
 
 seive :: [a] -> [a]
-seive (x:_:xss) = x : seive xssgi
+seive (x:_:xss) = x : seive xss
 seive xss = xss
 
 takeStep' :: Float -> Float -> Float -> SimState Float -> SimState Float
