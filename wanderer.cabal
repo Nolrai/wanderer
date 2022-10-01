@@ -26,6 +26,7 @@ common common-options
   build-depends:       base ^>= 4.14.3.0
                      , relude
                      , linear
+                     , vector
 
   mixins:              base hiding (Prelude)
 
@@ -57,6 +58,7 @@ library
   import:              common-options
   hs-source-dirs:      src
   exposed-modules:     Wanderer
+                       GeoAlg
   build-depends:       streams
 
 executable wanderer
@@ -75,7 +77,11 @@ test-suite wanderer-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
+  other-modules:       GeoAlgSpec
   build-depends:       wanderer
+                     , hspec
+                     , QuickCheck
+                     , simple-reflect
   ghc-options:         -threaded
                        -rtsopts
                        -with-rtsopts=-N

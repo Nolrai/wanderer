@@ -57,12 +57,15 @@ accFromP power scale x = (- scale / (quadrance x ** (power / 2))) *^ signorm x
 velFromQ :: V2 Float -> V2 Float
 velFromQ = id
 
-data SimState a = SimState {parity :: Bool, p :: V2 a, q :: V2 a, path :: [V2 a]}
+data SimState a = SimState {parity :: !Bool, p :: !(V2 a), q :: !(V2 a), path :: ![V2 a]}
   deriving stock (Show, Read, Eq, Ord, Generic)
+
+embed :: V2 Float -> V3 Float
+embed (V2 x y) = V3 x y 0
 
 takeStep :: Float -> Float -> Word32 -> t -> Float -> SimState Float -> SimState Float
 takeStep power scale numSubSteps _ deltaT s =
-  traceShow (p s, q s)
+  traceShow (embed (p s) `cross` embed (q s))
   shrinkPath
   . (!! fromIntegral numSubSteps) 
   . S.iterate (takeStep' power scale (deltaT / fromIntegral numSubSteps))
