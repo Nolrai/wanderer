@@ -7,8 +7,8 @@ import Relude
 import Linear ( (!*!), scaled, M44, V4(V4) )
 import Data.Complex as Complex ( conjugate, realPart, Complex(..) )
 import Data.Vector as Vector ( fromList, sum, zipWith, Vector )
-import Data.Map.Strict as Map ( fromList, toAscList, mapKeysMonotonic, foldrWithKey, unionWith, lookup, filter, singleton, insertWithKey, mapWithKey, mapKeysWith, fromListWith, keysSet, keys )
-import Data.Set as Set ( foldl', empty, singleton, size, fromList, isSubsetOf, insert )
+import Data.Map.Strict as Map ( fromList, toAscList, mapKeysMonotonic, foldrWithKey, unionWith, lookup, filter, singleton, insertWithKey, mapWithKey, mapKeysWith, fromListWith, keysSet, keys, toList )
+import Data.Set as Set ( foldl', empty, singleton, size, fromList, isSubsetOf, insert, toAscList )
 import Text.Show (Show(show))
 
 data Axis = T | X | Y | Z
@@ -65,7 +65,19 @@ j = 0 :+ 1
 newtype FreeModule basis a = MkFreeModule [([basis], a)]
 
 newtype MultiVector basis a = MkMultiVector (Map (Set basis) a)
-  deriving newtype (Eq, Show, Read)
+
+instance (Show basis, Show a) => Show (MultiVector basis a) where
+  show :: MultiVector basis a -> String
+  show (MkMultiVector m) = Text.Show.show $ bimap showBasis Text.Show.show <$> Map.toList m
+    where
+      showBasis :: Set basis -> String
+      showBasis s = mconcat $ Text.Show.show <$> Set.toAscList s
+
+instance (Ord basis, Eq a, Num a) => Eq (MultiVector basis a) where
+  a == b =
+    case (removeZeros a, removeZeros b) of
+      (MkMultiVector a',
+        MkMultiVector b') -> a' == b'
 
 data Sig = Neg | Zero | Pos
   deriving stock (Eq, Enum)
@@ -85,7 +97,7 @@ instance Num Sig where
   negate Neg = Pos
   Zero + x = x
   x + Zero = x
-  x + y 
+  x + y
     | x == y = x
     | otherwise = Zero
   abs = const Pos
@@ -100,14 +112,18 @@ reduce :: forall basis. (Ord basis) => (basis -> Sig) -> [basis] -> (Sig, Set ba
 reduce f l = (sig `withSig` sig', contracted)
   where
     (sig', contracted) = contract f sorted
-    (sig, sorted) = gnome Pos [] l
+    (sig, sorted) = insertSort l
 
-gnome :: Ord a => Sig -> [a] -> [a] -> (Sig, [a])
-gnome sig l [] = (sig, l)
-gnome sig [] (y : ys) = gnome sig [y] ys
-gnome sig (x:xs) (y:ys)
-  | x < y = gnome (negate sig) (y:xs) (x:ys)
-  | otherwise = gnome sig xs (y : x : ys)
+insertSort' :: Ord a => a -> (Sig, [a]) -> (Sig, [a])
+insertSort' x (sig, []) = (sig, [x])
+insertSort' x (sig, y:ys) =
+  if x <= y
+    then (sig, x:y:ys)
+    else case insertSort' x (sig, ys) of
+      (sig', ys') -> (negate sig', y : ys')
+
+insertSort :: Ord t => [t] -> (Sig, [t])
+insertSort = foldr insertSort' (Pos, [])
 
 contract :: (Ord a) => (a -> Sig) -> [a] -> (Sig, Set a)
 contract _ [] = (1, Set.empty)
@@ -171,7 +187,7 @@ cdot' x y = Vector.sum $ Vector.zipWith (\ a b -> a * Complex.conjugate b) x y
 removeZeros :: (Eq a, Num a) => MultiVector basis a -> MultiVector basis a
 removeZeros (MkMultiVector m) = MkMultiVector . Map.filter (/= 0) $ m
 
-instance (Eq a, Fractional a, QuadForm basis) =>
+instance (Eq a, Num a, QuadForm basis) =>
   Num (MultiVector basis a) where
     (+) :: MultiVector basis a -> MultiVector basis a -> MultiVector basis a
     MkMultiVector a + MkMultiVector b = removeZeros . MkMultiVector $ Map.unionWith (+) a b
